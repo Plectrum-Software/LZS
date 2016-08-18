@@ -61,6 +61,8 @@ public class GunShootScript : MonoBehaviour {
 		if (Time.time > nextFire) {
 			if (ammo > 0 && occupied == false) {
 				ammo--;
+				lineRenderer.enabled = true;
+
 				CameraShake ();
 				muzzleFlash.SetActive (true);
 				muzzleLight.SetActive (true);
@@ -73,7 +75,7 @@ public class GunShootScript : MonoBehaviour {
 				lineRenderer.SetPosition (0, muzzleFlash.transform.position);
 				lineRenderer.SetPosition (1, transform.forward * 30 + transform.position);
 				if (Physics.Raycast (ray, out hit)) {
-					
+
 					lineRenderer.SetPosition (1, hit.point);
 					GameObject createdHitPoint = Instantiate (hitPoint, hit.point, Quaternion.identity) as GameObject;
 					if (hit.transform.tag == "Zombie") {
@@ -94,6 +96,8 @@ public class GunShootScript : MonoBehaviour {
 					}
 				}
 				yield return new WaitForFixedUpdate ();
+				lineRenderer.enabled = false;
+
 				muzzleFlash.SetActive (false);
 				muzzleLight.SetActive (false);
 			}
@@ -137,7 +141,7 @@ public class GunShootScript : MonoBehaviour {
 	void Update () {
 
 		if (occupied == false) {
-			
+
 			if (Input.GetKeyDown (KeyCode.R)) {
 				StartCoroutine(Reload());
 			}
@@ -145,16 +149,16 @@ public class GunShootScript : MonoBehaviour {
 		if(shake_intensity > 0){
 			camera_.transform.localPosition = originPosition + Random.insideUnitSphere * shake_intensity;
 			camera_.transform.localRotation = new Quaternion(
-			camera_.transform.localRotation.x + Random.Range(-shake_intensity,shake_intensity)*recoil,
-			camera_.transform.localRotation.y + Random.Range(-shake_intensity,shake_intensity)*recoil*1.1F,
-			camera_.transform.localRotation.z + Random.Range(-shake_intensity,shake_intensity)*recoil,
-			camera_.transform.localRotation.w + Random.Range(-shake_intensity,shake_intensity)*recoil);
+				camera_.transform.localRotation.x + Random.Range(-shake_intensity,shake_intensity)*recoil,
+				camera_.transform.localRotation.y + Random.Range(-shake_intensity,shake_intensity)*recoil*1.1F,
+				camera_.transform.localRotation.z + Random.Range(-shake_intensity,shake_intensity)*recoil,
+				camera_.transform.localRotation.w + Random.Range(-shake_intensity,shake_intensity)*recoil);
 			shake_intensity -= shake_decay;
 		}
 
 
-//		Vector3 gunLookPosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 3);
-//		gunLookPosition = Camera.main.ScreenToWorldPoint(gunLookPosition);
+		//		Vector3 gunLookPosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 3);
+		//		gunLookPosition = Camera.main.ScreenToWorldPoint(gunLookPosition);
 
 		//Gun sway
 		MoveOnX = Input.GetAxis( "Mouse X" ) * Time.deltaTime * MoveAmount; 
