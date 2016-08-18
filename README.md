@@ -1,6 +1,6 @@
 # LZS
-###Last Zombie Survivor
-####LZS is a first person tower defence / zombie survival game being developed by *Plectrum Software*. 
+###*Last Zombie Survivor*
+####LZS is a low poly first person tower defence / zombie survival game being developed by *Plectrum Software*. 
 ####We have a dedicated small team of 5 students working on this project. :grinning:
 
 Uncleared is our lead programmer, and framework engineer.
