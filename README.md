@@ -9,5 +9,5 @@ Kukukoke is our lead 3D modeler.
 Stay3d is another 3D modeler and helps to manage the Github.
 Our fith memeber has yet to make a GitHub lol.
 
-True development has started as off 18/08/2016. :wink:
+True development has started as off 18/08/2016. 
 Our Trello board: https://trello.com/b/I32n3fWv/lzs
