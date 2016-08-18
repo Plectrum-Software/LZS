@@ -1,0 +1,171 @@
+using UnityEngine;
+using System.Collections;
+
+public class GunShootScript : MonoBehaviour {
+
+	public Color c1 = Color.yellow;
+	public Color c2 = Color.red;
+
+	public LineRenderer lineRenderer;
+
+	public bool occupied = false;
+
+	//Camera shake
+
+	public Vector3 originPosition;
+	public Quaternion originRotation;
+	public float shake_decay;
+	public float shake_intensity;
+
+
+
+	public GameObject camera_;
+
+	void CameraShake(){
+		shake_intensity = .03F;
+		shake_decay = 0.003F;
+	}
+
+	//Gun statistics
+	public float rateOfFire = 20.0F;
+	public float damage = 50.0F;
+	public float headShotDamage = 100.0F;
+
+
+	public int ammo;
+	public int clipSize;
+	public int storedAmmo;
+
+	public float recoil;
+	//Can the gun autofire?
+	public bool automatic;
+
+	//Flash effects
+	public GameObject muzzleFlash;
+	public GameObject muzzleLight;
+
+	//Blood
+	public GameObject blood;
+
+	public float nextFire = 0.0F;
+
+	public GameObject weaponsManagerGameObject;
+	public WeaponManagerScript weaponsManagerScript;
+
+	public GameObject hitPoint;
+
+	// Use this for initialization
+
+	IEnumerator Fire()
+	{
+		if (Time.time > nextFire) {
+			if (ammo > 0 && occupied == false) {
+				ammo--;
+				CameraShake ();
+				muzzleFlash.SetActive (true);
+				muzzleLight.SetActive (true);
+				muzzleFlash.transform.Rotate (0, Random.Range (0, 90), 0);
+				muzzleFlash.transform.localScale = new Vector3 (Random.Range (0.15F, 0.18F), Random.Range (0.1F, 0.11F), Random.Range (0.1F, 0.11F));
+				nextFire = Time.time + 60.0F / rateOfFire;
+				Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition);
+				//Collision
+				RaycastHit hit;
+				lineRenderer.SetPosition (0, muzzleFlash.transform.position);
+				lineRenderer.SetPosition (1, transform.forward * 30 + transform.position);
+				if (Physics.Raycast (ray, out hit)) {
+					
+					lineRenderer.SetPosition (1, hit.point);
+					GameObject createdHitPoint = Instantiate (hitPoint, hit.point, Quaternion.identity) as GameObject;
+					if (hit.transform.tag == "Zombie") {
+						ZombieScript zombieScript;
+						zombieScript = hit.transform.GetComponent<ZombieScript> ();
+
+						GameObject createdBlood = Instantiate (blood, hit.point, hit.transform.rotation) as GameObject;
+						Destroy (createdBlood, 1.2F);
+						Destroy (createdHitPoint, 1.2F);
+						if (hit.transform.name == "Head") {
+							zombieScript = hit.transform.parent.GetComponent<ZombieScript> ();
+							zombieScript.health -= headShotDamage;
+
+						} else {
+							zombieScript.health -= damage;
+
+						}
+					}
+				}
+				yield return new WaitForFixedUpdate ();
+				muzzleFlash.SetActive (false);
+				muzzleLight.SetActive (false);
+			}
+		}
+	}
+	void Start () {
+		DefaultPos = transform.localPosition;
+		lineRenderer = gameObject.AddComponent(typeof(LineRenderer)) as LineRenderer;
+		lineRenderer.material = new Material (Shader.Find("Particles/Additive"));
+		lineRenderer.SetWidth(0.02f,0.02f);
+		lineRenderer.SetColors(c1, c2);
+		lineRenderer.SetVertexCount(2);
+
+		originPosition = camera_.transform.localPosition;
+		originRotation = camera_.transform.localRotation;
+		muzzleFlash.SetActive (false);
+		muzzleLight.SetActive (false);
+		weaponsManagerScript = weaponsManagerGameObject.GetComponent<WeaponManagerScript> ();
+
+	}
+
+	public float MoveAmount = 5.0F;
+	public float MoveSpeed = 2.0f; public float MoveOnX; public float MoveOnY; 
+	public Vector3 DefaultPos; public Vector3 NewGunPos;
+
+
+
+	IEnumerator Reload()
+	{
+		if (ammo < clipSize) {
+			occupied = true;
+			yield return new WaitForSeconds (1.5f);
+			int addedAmount = clipSize - ammo;
+			ammo = clipSize;
+			storedAmmo -= addedAmount;
+			occupied = false;
+
+		}
+	}
+	// Update is called once per frame
+	void Update () {
+
+		if (occupied == false) {
+			
+			if (Input.GetKeyDown (KeyCode.R)) {
+				StartCoroutine(Reload());
+			}
+		}
+		if(shake_intensity > 0){
+			camera_.transform.localPosition = originPosition + Random.insideUnitSphere * shake_intensity;
+			camera_.transform.localRotation = new Quaternion(
+			camera_.transform.localRotation.x + Random.Range(-shake_intensity,shake_intensity)*recoil,
+			camera_.transform.localRotation.y + Random.Range(-shake_intensity,shake_intensity)*recoil*1.1F,
+			camera_.transform.localRotation.z + Random.Range(-shake_intensity,shake_intensity)*recoil,
+			camera_.transform.localRotation.w + Random.Range(-shake_intensity,shake_intensity)*recoil);
+			shake_intensity -= shake_decay;
+		}
+
+
+//		Vector3 gunLookPosition = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 3);
+//		gunLookPosition = Camera.main.ScreenToWorldPoint(gunLookPosition);
+
+		//Gun sway
+		MoveOnX = Input.GetAxis( "Mouse X" ) * Time.deltaTime * MoveAmount; 
+		MoveOnY = Input.GetAxis( "Mouse Y" ) * Time.deltaTime * MoveAmount; 
+		NewGunPos = new Vector3 ( DefaultPos.x+ MoveOnX, DefaultPos.y+ MoveOnY, DefaultPos.z); 
+		transform.localPosition = Vector3.Lerp(transform.localPosition, NewGunPos , MoveSpeed * Time.deltaTime);
+
+		//transform.LookAt (gunLookPosition);
+		if(weaponsManagerScript.held == true)
+		{
+			StartCoroutine(Fire());
+		}
+	}
+}
