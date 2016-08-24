@@ -1,0 +1,50 @@
+using UnityEngine;
+using System.Collections;
+
+public class ZombieScript : MonoBehaviour {
+
+	public float health;
+
+	public GameObject target;
+	public float walkSpeed = 1.1F;
+	public Transform weaponManager;
+
+	// Use this for initialization
+	void Start () {
+	
+	}
+
+	// Update is called once per frame
+	void Update () {
+		if (health <= 0) {
+			Destroy (gameObject);
+		}
+	}
+
+	void FixedUpdate()
+	{
+		transform.LookAt (target.transform.position, Vector3.up);
+		transform.Translate (Vector3.forward * Time.deltaTime*walkSpeed, Space.Self);
+	}
+
+	public float timer;
+
+	void OnCollisionStay(Collision collided)
+	{
+
+		timer += 0.1f;
+		if (timer >= 4) {
+			timer = 0;
+			if (collided.transform.tag == "Player") {
+
+				WeaponManagerScript weaponManagerScript = weaponManager.GetComponent<WeaponManagerScript> ();
+				if (weaponManagerScript) {
+					weaponManagerScript.TakeDamage (10f);
+				} else {
+					print ("Error function OnCliisionStay ZombieScript");
+				}
+			}
+		}
+	}
+}
+
