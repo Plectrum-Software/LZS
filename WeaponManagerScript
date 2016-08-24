@@ -4,84 +4,143 @@ using System.Collections;
 
 public class WeaponManagerScript : MonoBehaviour {
 
-	public float health = 100;
+
 	//Variables
 	public GameObject[] weapons;
 	public int currentWeapon;
 
+	public int ammo;
+	public int clipSize;
+	public int maxStoredAmmo;
+
+	public bool occupied = false;
+
+	public float health;
 
 	public bool held;
 
+	public int cash;
+
 	//UI Variables
 	//public UnityEngine.UI.Text currentWeaponUI;
-	//UI Stuff
+	public TextMesh ammoUI;
+	public UnityEngine.UI.Image redFlash;
+	public UnityEngine.UI.Text healthUI;
+
 	public UnityEngine.UI.Image crosshair;
-	public UnityEngine.UI.Text ammoUI;
+	public GameObject shop;
 
+	public bool shopping = false;
 
+	public void AddWeapon(GameObject item)
+	{
+		GameObject[] tempWeapons = new GameObject[weapons.Length + 1];
+		weapons.CopyTo(tempWeapons,0);
+		tempWeapons[weapons.Length] = item;
+
+		weapons = tempWeapons;
+
+	}
+
+	public void TakeDamage(float damage)
+	{
+		redFlash.CrossFadeAlpha( 0.5f, 0f,false);
+		health -= damage;
+		redFlash.CrossFadeAlpha (0f, 0.5f,false);
+	}
 	void UpdateUI()
 	{
-		ammoUI.text = "Ammo: " + weapons [currentWeapon].GetComponent<GunShootScript> ().ammo +"/"+weapons [currentWeapon].GetComponent<GunShootScript> ().storedAmmo ;
+		
+		GunShootScript gunShootScript = weapons [currentWeapon].GetComponent<GunShootScript> ();
+		healthUI.text = health +"/"+"100";
+		if (gunShootScript) {
+			ammoUI.text = ""+gunShootScript.ammo;
+		} else {
+			GrenadeThrowScript grenadeThrowScript = weapons [currentWeapon].GetComponent<GrenadeThrowScript> ();
+			if (grenadeThrowScript) {
+				ammoUI.text = "Ammo: " + grenadeThrowScript.ammo + "/" + grenadeThrowScript.storedAmmo;
+			} else {
+				ammoUI.text = "N/A";
+			}
+		}
+
+		if (shopping == false) {
+			Vector3 mousePos = Input.mousePosition;
+		}
+
+
 	}
 	// Use this for initialization
 	void Start () {
-		UpdateUI ();
+		redFlash.CrossFadeAlpha (0f, 0f,false);
 		SwitchToCurrentWeapon ();
 	}
 	
 	// Update is called once per frame
 	void Update () {
-		crosshair.transform.position = new Vector2(Input.mousePosition.x,Input.mousePosition.y);
-		int pseudoWeapon = currentWeapon;
+		if (shopping == false) {
+			Cursor.lockState = CursorLockMode.Locked;
+			Cursor.visible = false;
 
-		if (Input.GetKeyDown ("1")) 
-		{
-			if (pseudoWeapon < weapons.Length - 1) 
-			{
-				pseudoWeapon += 1;
-			}
-			else if(pseudoWeapon == weapons.Length - 1)
-			{
-				pseudoWeapon = 0;
-			}
-			currentWeapon = pseudoWeapon;
-			SwitchToCurrentWeapon ();
+		} else if (shopping == true) {
+			Cursor.lockState = CursorLockMode.None;
+			Cursor.visible = true;
+		}
+		if (occupied == false) {
+			UpdateUI ();
+			int pseudoWeapon = currentWeapon;
+			if (Input.GetKeyDown ("q")) {
+				if (pseudoWeapon < weapons.Length - 1) {
+					pseudoWeapon += 1;
+				} else if (pseudoWeapon == weapons.Length - 1) {
+					pseudoWeapon = 0;
+				}
+				currentWeapon = pseudoWeapon;
+				SwitchToCurrentWeapon ();
 
+			}
+			GunShootScript gunShootScript = weapons [currentWeapon].GetComponent<GunShootScript> ();
+
+			if (Input.GetMouseButtonDown (0)) {
+				if (gunShootScript) {
+					if (gunShootScript.automatic == true) {
+						held = true;
+					} else if (gunShootScript.automatic == false) {
+						weapons [currentWeapon].SendMessage ("Fire", null, SendMessageOptions.DontRequireReceiver);
+					}
+
+				} else {
+					GrenadeThrowScript grenadeThrowScript = weapons [currentWeapon].GetComponent<GrenadeThrowScript> ();
+					if (grenadeThrowScript) {
+						weapons [currentWeapon].SendMessage ("Throw", null, SendMessageOptions.DontRequireReceiver);
+					}
+				}
+			}
+
+			if (Input.GetMouseButtonUp (0)) {
+
+				if (gunShootScript) {
+					if (gunShootScript.automatic == true) {
+						held = false;
+					}
+
+				}
+			}
 		}
 
+		if (Input.GetKeyDown (KeyCode.E)) {
+			if (shopping == true) {
+				crosshair.gameObject.SetActive (true);
+				shopping = false;
+				shop.SetActive (false);
 
-		GunShootScript gunShootScript = weapons [currentWeapon].GetComponent<GunShootScript>();
-
-		if(Input.GetMouseButtonDown(0))
-		{
-			if(gunShootScript)
-			{
-				if(gunShootScript.automatic == true)
-				{
-					held = true;
-				}
-				else if(gunShootScript.automatic == false)
-				{
-					weapons[currentWeapon].SendMessage("Fire", null, SendMessageOptions.DontRequireReceiver);
-				}
+			} else if (shopping == false) {
+				crosshair.gameObject.SetActive (false);
+				shopping = true;
+				shop.SetActive (true);
 
 			}
 		}
-
-		if(Input.GetMouseButtonUp(0))
-		{
-
-			if(gunShootScript)
-			{
-				if(gunShootScript.automatic == true)
-				{
-					held = false;
-				}
-
-			}
-		}
-
-
 	}
 
 	void SwitchToCurrentWeapon()
@@ -98,24 +157,8 @@ public class WeaponManagerScript : MonoBehaviour {
 
 			}
 		}
-	}
-
-
-	void FixedUpdate()
-	{
 		UpdateUI ();
 	}
-	void AddWeapon(GameObject item)
-	{
 
-		GameObject[] tempWeapons = new GameObject[weapons.Length + 1];
-		weapons.CopyTo(tempWeapons,0);
-		tempWeapons[weapons.Length] = item;
-
-		weapons = tempWeapons;
-
-
-
-	}
 
 }
