@@ -8,7 +8,6 @@ public class GunShootScript : MonoBehaviour {
 
 	public LineRenderer lineRenderer;
 
-	public bool occupied = false;
 
 	//Camera shake
 
@@ -16,7 +15,9 @@ public class GunShootScript : MonoBehaviour {
 	public Quaternion originRotation;
 	public float shake_decay;
 	public float shake_intensity;
+	public float reloadTime;
 
+	public Vector3 hipPos;
 
 
 	public GameObject camera_;
@@ -59,7 +60,7 @@ public class GunShootScript : MonoBehaviour {
 	IEnumerator Fire()
 	{
 		if (Time.time > nextFire) {
-			if (ammo > 0 && occupied == false) {
+			if (ammo > 0 && weaponsManagerScript.occupied == false) {
 				ammo--;
 				lineRenderer.enabled = true;
 
@@ -67,7 +68,7 @@ public class GunShootScript : MonoBehaviour {
 				muzzleFlash.SetActive (true);
 				muzzleLight.SetActive (true);
 				muzzleFlash.transform.Rotate (0, Random.Range (0, 90), 0);
-				muzzleFlash.transform.localScale = new Vector3 (Random.Range (0.15F, 0.18F), Random.Range (0.1F, 0.11F), Random.Range (0.1F, 0.11F));
+				muzzleFlash.transform.localScale = new Vector3 (Random.Range (0.2F, 0.25F), Random.Range (0.2F, 0.25F), Random.Range (0.2F, 0.25F));
 				nextFire = Time.time + 60.0F / rateOfFire;
 				Ray ray = Camera.main.ScreenPointToRay (Input.mousePosition + new Vector3(Random.Range(-7f,7f),Random.Range(-7f,7f),Random.Range(-7f,7f)));
 				//Collision
@@ -81,6 +82,7 @@ public class GunShootScript : MonoBehaviour {
 					if (hit.transform.tag == "Zombie") {
 						ZombieScript zombieScript;
 						zombieScript = hit.transform.GetComponent<ZombieScript> ();
+						zombieScript.target = transform.gameObject;
 
 						GameObject createdBlood = Instantiate (blood, hit.point, hit.transform.rotation) as GameObject;
 						Destroy (createdBlood, 1.2F);
@@ -95,6 +97,8 @@ public class GunShootScript : MonoBehaviour {
 						}
 					}
 				}
+				yield return new WaitForFixedUpdate ();
+				yield return new WaitForFixedUpdate ();
 				yield return new WaitForFixedUpdate ();
 				lineRenderer.enabled = false;
 
@@ -128,19 +132,28 @@ public class GunShootScript : MonoBehaviour {
 	IEnumerator Reload()
 	{
 		if (ammo < clipSize) {
-			occupied = true;
-			yield return new WaitForSeconds (1.5f);
+			weaponsManagerScript.occupied = true;
+			yield return new WaitForSeconds (reloadTime);
 			int addedAmount = clipSize - ammo;
 			ammo = clipSize;
 			storedAmmo -= addedAmount;
-			occupied = false;
+			weaponsManagerScript.occupied = false;
 
 		}
 	}
+
+
+
 	// Update is called once per frame
 	void Update () {
 
-		if (occupied == false) {
+		if (Input.GetButtonDown ("Fire2")) {
+
+
+			transform.localPosition = Vector3.Lerp(transform.localPosition, hipPos, Time.deltaTime);
+
+		}
+		if (weaponsManagerScript.occupied == false) {
 
 			if (Input.GetKeyDown (KeyCode.R)) {
 				StartCoroutine(Reload());
