@@ -1,0 +1,783 @@
+using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.UI;
+
+public class PlayerManager : MonoBehaviour {
+	//Use array values instead of variable
+	//New grenade function needed
+	[System.Serializable]
+	public class PlayerStats
+	{
+		public int defaultGrenades;
+		public string[][] buildMaterials; 
+		public int grenades;
+
+		public float health = 100;
+		public float defaultHealth = 100;
+
+
+	}
+
+	public int equipped = 0;
+	public int currentBuildMaterial = 0;
+
+	public PlayerStats playerStats;
+
+	[Space(20)]
+
+	bool isCooldown = false;
+
+	public float throwPower = 0f;
+
+	public GameObject chainSaw;
+
+
+	public GameObject ghostCrate;
+
+	public GameObject arms;
+
+	[Header("Building Materials")]
+	public GameObject crate;
+	public GameObject landmine;
+
+
+	[Header("UI")]
+
+	//UI variables
+
+
+
+
+	//Flashing for collecting stuff, not using now
+//	public UnityEngine.UI.Image flashBrown;
+//	public UnityEngine.UI.Image flashYellow;
+//
+	public Image flashRed;
+	public Image flashGreen;
+	public Text healthUI;
+	public Text grenadesUI;
+	public Text statisticsUI;
+	GameObject ui;
+	GameObject weapons;
+
+	[Space(20)]
+
+
+	[Header("Unorganised variables")]
+
+	public TrailArc _trail;
+
+
+
+	public Rigidbody rb;
+
+	public GameObject collectParticles;
+
+
+	public GameObject hammer;
+	public GameObject katana;
+	public GameObject grenadeHand;
+
+
+	public GameObject _camera;
+
+	public GameObject grenade;
+
+	GameObject gameManager;
+
+
+
+	public AudioSource audioSource;
+
+	public AudioClip swordSwing;
+
+
+	// Use this for initialization
+
+	void IntitialiseStartingStatistics()
+	{
+		
+	
+		playerStats.buildMaterials = new string[2][];
+
+		playerStats.buildMaterials [0] = new string[]{
+			"Crates" 
+			, "25" 
+			, "0"
+		};
+		playerStats.buildMaterials [1] = new string[]{
+			"Landmines"
+			, "5"
+			, "0"
+		};
+
+
+		//Will use seperate XML or JSON file to do this more efficiently once I know how
+
+
+		//0 = name
+		//1 = default#
+		//2 = current#
+
+		//Crates 
+//		SetBuildMaterialValue (0, "Crates", 0);
+//		SetBuildMaterialValue (1, "25", 0);
+//		SetBuildMaterialValue (2, "0", 0);
+//
+//		//Landmines
+//
+//		SetBuildMaterialValue (0, "Landmines", 1);
+//		SetBuildMaterialValue (1, "5", 1);
+//		SetBuildMaterialValue (2, "0", 1);
+
+
+
+	}
+
+	void SetBuildMaterialValue(int name, string value, int index)
+	{
+//		playerStats.buildMaterials [index] [name] = value;
+	}
+
+	void Awake()
+	{
+		ui = GameObject.FindGameObjectWithTag ("UI");
+		flashRed = ui.transform.Find ("FlashRed").GetComponent<Image> ();
+		flashGreen = ui.transform.Find ("FlashGreen").GetComponent<Image> ();
+		healthUI = ui.transform.Find ("HealthUI").GetComponent<Text> ();
+		grenadesUI = ui.transform.Find ("GrenadesUI").GetComponent<Text> ();
+		statisticsUI = ui.transform.Find ("StatisticsUI").GetComponent<Text> ();
+		weapons = GameObject.FindGameObjectWithTag ("Weapons");
+	}
+	void Start () {
+		
+	
+
+
+
+		audioSource = GetComponent<AudioSource> ();
+
+	
+		Equip ();
+		ghostCrate.SetActive (false);
+		ResetPlayer ();
+
+		IntitialiseStartingStatistics ();
+	}
+
+	void SubtractHealth(float amount)
+	{
+		flashRed.canvasRenderer.SetAlpha (0.8f);
+		flashRed.CrossFadeAlpha (0f, 0.8f, false);
+		playerStats.health -= amount;
+
+		if (playerStats.health <= 0) {
+			gameManager.SendMessage ("GameOver");
+
+		}
+	}
+
+	void AddHealth(float amount)
+	{
+//		flashGreen.canvasRenderer.SetAlpha (0.8f);
+//		flashGreen.CrossFadeAlpha (0f, 0.8f, false);
+
+		CreateCollectParticles (new Color (0, 1, 0, 0.5f));
+
+		playerStats.health += amount;
+	}
+
+	void SetHealth(float amount)
+	{
+		playerStats.health = amount;
+	}
+
+	void DisableAllWeapons()
+	{
+		foreach (Transform weapon in weapons.transform) {
+			weapon.gameObject.SetActive (false);
+		}
+	}
+	void ResetPlayer()
+	{
+		chainSaw.SetActive (false);
+		playerStats.grenades = playerStats.defaultGrenades;
+
+		playerStats.health = playerStats.defaultHealth;
+
+		gameManager = GameObject.FindGameObjectWithTag ("GameManager");
+
+		//UI stuff
+//		flashBrown.gameObject.SetActive (true);
+//		flashBrown.canvasRenderer.SetAlpha (0f);
+//
+//		flashYellow.gameObject.SetActive (true);
+//		flashYellow.canvasRenderer.SetAlpha (0f);
+
+		flashRed.gameObject.SetActive (true);
+		flashRed.canvasRenderer.SetAlpha (0f);
+
+		flashGreen.gameObject.SetActive (true);
+		flashGreen.canvasRenderer.SetAlpha (0f);
+
+
+
+
+	}
+
+	//The particles you see when you collect stuff
+	void CreateCollectParticles(Color color)
+	{
+		collectParticles.GetComponent<ParticleSystem> ().startColor = color;
+		GameObject createdCollectParticles = Instantiate (collectParticles, transform.position, Quaternion.identity) as GameObject;
+
+		createdCollectParticles.GetComponent<ParticleSystem> ().Emit (50);
+
+
+		Destroy (createdCollectParticles, 1f);
+	}
+
+
+	void AddBuildMaterial(int amount)
+	{
+
+		int newCurrentBuildMaterialQuantity = int.Parse(playerStats.buildMaterials [currentBuildMaterial] [1]);
+
+		newCurrentBuildMaterialQuantity += amount;
+		playerStats.buildMaterials [currentBuildMaterial] [1] = newCurrentBuildMaterialQuantity.ToString ();
+	}
+	//Adding stuff to player
+	//---------------------------------------------------------------------//
+
+
+	void AddCrate(int amount)
+	{
+//		flashBrown.canvasRenderer.SetAlpha (0.8f);
+//		flashBrown.CrossFadeAlpha (0f, 0.8f, false);
+
+		CreateCollectParticles (new Color (0.56f, 0.35f, 0, 0.5f));
+		AddBuildMaterial (amount);
+	}
+
+	void AddLandmine(int amount)
+	{
+		CreateCollectParticles (new Color (0.56f, 0.35f, 0, 0.5f));
+		AddBuildMaterial (amount);
+
+	}
+	void AddGrenade(int amount)
+	{
+//		flashYellow.canvasRenderer.SetAlpha (0.8f);
+//		flashYellow.CrossFadeAlpha (0f, 0.8f, false);
+
+		CreateCollectParticles (new Color (1, 0.7f, 0.02f, 0.5f));
+
+		playerStats.grenades += amount;
+	}
+	//---------------------------------------------------------------------//
+
+
+	void Build()
+	{
+		switch (currentBuildMaterial) {
+		case 0:
+			BuildCrate ();
+			break;
+		case 1:
+			BuildLandmine ();
+			break;
+		default:
+			Debug.Log ("Invalid building material!");
+			break;
+		
+			
+
+		}
+	}
+
+	bool PlaceBlock(GameObject block)
+	{
+		//Play build animation
+		arms.GetComponent<Animation> ().Play ("HammerHit");
+
+		//Ray cast to where to place block
+		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+		RaycastHit hit;
+
+		Vector3 gridPosition = Vector3.zero;
+
+		if (Physics.Raycast (ray, out hit))
+		{
+			bool didBuild = true;
+			if (hit.transform.GetComponent<WallScript> () != null) {
+				gridPosition = hit.transform.position + hit.normal * block.transform.localScale.x;
+		
+			} else if (hit.transform.tag == "IgnoreGhostCrate") {
+				float gridSize = 2f;
+
+				gridPosition = new Vector3 (Mathf.Round (hit.point.x / gridSize) * gridSize, hit.point.y + block.transform.localScale.y / 2f, Mathf.Round (hit.point.z / gridSize) * gridSize);
+			} else {
+				didBuild = false;
+			}
+			var blockInstance = (GameObject)Instantiate (block, gridPosition, Quaternion.identity);
+			if (didBuild) {
+				return true;
+			}
+		}
+		return false;
+
+	}
+	//---------------------BUILDING SYSTEM-----------------------------------//
+	void BuildCrate()
+	{
+		if (int.Parse(playerStats.buildMaterials [currentBuildMaterial] [1]) > 0) {
+			if (PlaceBlock (crate) == true) {
+				var value =(int) int.Parse (playerStats.buildMaterials [currentBuildMaterial] [1]);
+				value--;
+				playerStats.buildMaterials [currentBuildMaterial] [1] = value.ToString ();
+			}
+
+		}
+			
+	}
+
+	void BuildLandmine()
+	{
+		if (int.Parse(playerStats.buildMaterials [currentBuildMaterial] [1]) > 0) {
+			if (PlaceBlock (landmine) == true) {
+				var value =(int) int.Parse (playerStats.buildMaterials [currentBuildMaterial] [1]);
+				value--;
+				playerStats.buildMaterials [currentBuildMaterial] [1] = value.ToString ();
+			}
+
+		}
+	}
+
+	void DestroyBlock()
+	{
+		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+		RaycastHit hit;
+
+		Vector3 gridPosition = Vector3.zero;
+
+		if (Physics.Raycast (ray, out hit))
+		{
+
+			if (hit.transform.GetComponent<WallScript> () != null) {
+				Destroy (hit.transform.gameObject);
+
+			}
+		
+
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------//
+
+	//-------------------------------ATTACKING---------------------------------------------------------//
+	IEnumerator ThrowGrenade()
+	{
+		
+		if (playerStats.grenades > 0 && throwPower>20f) {
+
+			playerStats.grenades -= 1;
+
+		
+			isCooldown = false;
+			Vector3 position = new Vector3(Input.mousePosition.x, Input.mousePosition.y, 100f);
+			position = Camera.main.ScreenToWorldPoint(position);
+
+			GameObject createdGrenade = Instantiate (grenade, grenadeHand.transform.position, grenadeHand.transform.rotation) as GameObject;
+			createdGrenade.transform.LookAt (position);
+			createdGrenade.GetComponent<Rigidbody> ().AddForce (createdGrenade.transform.forward * throwPower);
+			throwPower = 0f;
+
+
+			yield return new WaitForSeconds (1f);
+			equipped = 0;
+
+			Equip ();
+		}
+	}
+
+	int slashCombo = 0;
+
+	void SlashLeftAndRightFinished()
+	{
+		_trail.Emit = false;
+		chainSaw.SetActive (false);
+	}
+
+	void LeftSlashPart2()
+	{
+		_trail.Emit = true;
+		chainSaw.SetActive (true);
+		iTween.RotateTo (arms, iTween.Hash("y", -20 , "islocal", true, "time", 0.2, "oncompletetarget", gameObject, "oncomplete", "SlashLeftAndRightFinished"));
+
+	}
+
+	void RightSlashPart2()
+	{
+		_trail.Emit = true;
+		chainSaw.SetActive (true);
+		iTween.RotateTo (arms, iTween.Hash("y", 30 , "islocal", true, "time", 0.2, "oncompletetarget", gameObject, "oncomplete", "SlashLeftAndRightFinished"));
+
+	}
+
+
+
+	void DashFinished()
+	{
+		transform.parent.parent.gameObject.GetComponent<UnityStandardAssets.Characters.FirstPerson.FirstPersonController> ().enabled = true;
+		_trail.Emit = false;
+	}
+	IEnumerator SlashDown()
+	{
+		Hashtable ht = new Hashtable();
+
+		if (isCooldown == false) {
+			// CurrentTargetSpeed *= RunMultiplier;
+			audioSource.clip = swordSwing;
+			audioSource.Play ();
+			isCooldown = true;
+			_trail.Emit = true;
+
+		
+			iTween.RotateTo (arms, iTween.Hash("x", 80f, "islocal", true, "time", 0.2f));
+			chainSaw.SetActive (true);
+
+
+			//			_trail.enabled = true;
+			//			_trail.time = 0.6f;
+
+
+			//Slash animation(doesn't actually use Unity animation just tweening)
+			//Slash down
+			//Genji attack
+
+			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+			RaycastHit hit;
+
+			Vector3 slashPosition = transform.position;
+
+
+			if (Physics.Raycast (ray, out hit)) {
+
+				if (hit.distance >= 25f) {
+					slashPosition = transform.parent.parent.position + transform.parent.forward * 25f;
+				} else if(hit.distance > 1f && hit.distance < 25f){
+					if (hit.transform.tag == "Zombie" || hit.transform.tag == "Demon") {
+						slashPosition = hit.point + transform.parent.forward * 15f;
+					} else if(hit.distance > 2f && hit.distance < 25f){
+						slashPosition = hit.point - transform.parent.forward * 4f;
+					}
+
+
+				}
+
+			} else {
+				slashPosition = transform.parent.parent.position + transform.parent.forward * 23f;
+			}
+
+			iTween.MoveTo (transform.parent.parent.gameObject, iTween.Hash("position", slashPosition, "time", 
+				0.4f, "oncompletetarget", gameObject, "oncomplete", "DashFinished"));
+
+			transform.parent.parent.gameObject.GetComponent<UnityStandardAssets.Characters.FirstPerson.FirstPersonController> ().enabled = false;
+
+			//				
+			//gameObject.SendMessageUpwards ("Dash", 0.1f, SendMessageOptions.DontRequireReceiver);
+			yield return new WaitForSeconds (0.4f);
+
+
+
+			iTween.RotateTo (arms, iTween.Hash("x", 0f, "islocal", true, "time", 0.8f));
+
+
+
+			chainSaw.SetActive (false);
+			yield return new WaitForSeconds (0.8f);
+
+			isCooldown = false;
+
+
+		}
+	}
+
+	IEnumerator SlashLeftAndRight()
+	{
+		Hashtable ht = new Hashtable();
+
+		if (isCooldown == false) {
+	
+			// CurrentTargetSpeed *= RunMultiplier;
+			audioSource.clip = swordSwing;
+			audioSource.Play ();
+			isCooldown = true;
+
+			if (slashCombo < 1) {
+				slashCombo++;
+			} else if (slashCombo == 1) {
+				slashCombo = 0;
+			}
+
+			switch (slashCombo) {
+
+			//Slash Left
+			case 0:
+				iTween.RotateTo (arms, iTween.Hash("z", Random.Range(85,100), "islocal", true, "time", 
+					0.1, "oncompletetarget", gameObject, "oncomplete", "LeftSlashPart2"));
+
+				break;
+
+				//Slash Right
+			case 1:
+				iTween.RotateTo (arms, iTween.Hash("z", Random.Range(-100,-85) , "islocal", true, "time", 
+					0.1, "oncompletetarget", gameObject, "oncomplete", "RightSlashPart2"));
+
+
+				break;
+			default:
+				break;
+			}
+
+			//gameObject.SendMessageUpwards ("BoostSpeed", 5f, SendMessageOptions.DontRequireReceiver);
+			//			_trail.enabled = true;
+			//			_trail.time = 0.6f;
+
+
+			//Slash animation(doesn't actually use Unity animation just tweening)
+			//Slash down
+
+
+
+			//			Vector3 slashPosition = transform.parent.parent.position + transform.parent.forward * 5f;
+			//			iTween.MoveTo (transform.parent.parent.gameObject, slashPosition, 1f);
+			//				
+			//			gameObject.SendMessageUpwards ("Dash", 0.1f, SendMessageOptions.DontRequireReceiver);
+
+
+
+
+			yield return new WaitForSeconds (0.5f);
+
+			isCooldown = false;
+
+
+		}
+	}
+	//Slash attack
+
+	//------------------------------------------------------------------------------------------------//
+
+	/// Updates the UI.
+	void UpdateUI()
+	{
+		healthUI.text = "Health: " + Mathf.RoundToInt(playerStats.health);
+		grenadesUI.text = "Grenades: " + playerStats.grenades;
+		if (equipped == 0) {
+			
+
+
+			statisticsUI.text = "Equipped: Katana";
+		} else if (equipped == 1) {
+			
+			statisticsUI.text = "Equipped: " + playerStats.buildMaterials [currentBuildMaterial] [0] + ": "+playerStats.buildMaterials [currentBuildMaterial] [1];
+
+
+
+
+		}
+		else if(equipped ==2){
+			statisticsUI.text = "Throwing grenade..";
+		
+
+
+		}
+	}
+
+	// Update is called once per frame
+	void Update () {
+		
+
+		//Left button click
+		if (Input.GetMouseButtonDown (0)) {
+			switch (equipped) {
+			case 0:
+
+				StartCoroutine (SlashLeftAndRight ());
+
+		
+				
+				break;
+			case 1:
+				Build ();
+
+
+				break;
+
+			case 2:
+				break;
+			}
+				
+		
+		}
+
+		//Right button click
+		if (Input.GetMouseButtonDown (1)) {
+			switch (equipped) {
+			case 0:
+				StartCoroutine (SlashDown ());
+				break;
+			case 1:
+				DestroyBlock ();	
+				break;
+
+			case 2:
+				
+				break;
+			}
+		}
+
+		
+
+		//Left button up
+		if (Input.GetMouseButtonUp (0)) {
+			switch (equipped) {
+			case 0:
+
+				break;
+			case 1:
+
+				break;
+
+			case 2:
+				
+				break;
+			}
+
+		}
+
+//		//Right click test grid building
+//		if (Input.GetMouseButtonDown (1)) {
+//			Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+//			RaycastHit hit;
+//
+//			Vector3 gridPosition = Vector3.zero;
+//
+//			if (Physics.Raycast (ray, out hit))
+//			{
+////				
+//				if (hit.transform.GetComponent<WallScript> () != null) {
+//					gridPosition = hit.transform.position + hit.normal * crate.transform.localScale.x;
+//
+//				} else if(hit.transform.tag == "IgnoreGhostCrate") {
+//					float gridSize = 2f;
+//					gridPosition = new Vector3 (Mathf.Round (hit.point.x/gridSize)*gridSize, hit.point.y + crate.transform.localScale.y/2f, Mathf.Round (hit.point.z/gridSize) * gridSize);
+//				}
+//
+//				var crateInstance = (GameObject)Instantiate (crate, gridPosition, Quaternion.identity);
+//	
+//			}
+//		}
+
+
+	
+
+		if (isCooldown == false) {
+
+			//Quick switch
+			if (Input.GetKeyDown (KeyCode.Q)) {
+				equipped++;
+				if (equipped > 1) {
+					equipped = 0;
+				} 
+				Equip ();
+			}
+
+			if (Input.GetKeyDown (KeyCode.Z)) {
+				currentBuildMaterial++;
+				if (currentBuildMaterial > 1) {
+					currentBuildMaterial = 0;
+				}
+			}
+
+			//Make grenade visible
+			if (Input.GetKeyDown (KeyCode.G)) {
+				equipped = 2;
+				Equip ();
+			}
+
+
+			//Hold down grenade
+			if (Input.GetKey (KeyCode.G)) {
+				if (throwPower < 1200f) {
+					throwPower += 8f;
+				}
+			}
+
+			//Throw grneade
+			if (Input.GetKeyUp (KeyCode.G)) {
+				StartCoroutine (ThrowGrenade ());
+			}
+			//Equip sword
+			if (Input.GetKeyDown (KeyCode.Alpha1)) {
+				equipped = 0;
+				Equip ();
+			}
+			//Equip builder
+			if (Input.GetKeyDown (KeyCode.Alpha2)) {
+				equipped = 1;
+				Equip ();
+
+			}
+		}
+
+		//Equip grenade
+//		if (Input.GetKeyDown (KeyCode.Alpha3)) {
+//			equipped = 2;
+//			Equip ();
+//		}
+	}
+
+	//Equip function
+	void Equip()
+	{
+		DisableAllWeapons ();
+		arms.GetComponent<Animation> ().Play ("Equip");
+		ghostCrate.SetActive (false);
+		switch (equipped) {
+
+
+		case 0:
+			//Equip katana
+			katana.SetActive (true);
+		
+			break;
+		case 1:
+			//Equip hammer
+			hammer.SetActive (true);
+		
+			break;
+		case 2:
+			//Equip grenade
+			grenadeHand.SetActive (true);
+			break;
+		}
+	}
+	void FixedUpdate()
+	{
+		if (equipped == 2 && isCooldown == false) {
+			if (playerStats.grenades > 0) {
+				grenadeHand.SetActive (true);
+			} else {	
+				grenadeHand.SetActive (false);
+			}
+		}
+		UpdateUI ();
+		if (isCooldown == false) {
+			arms.transform.localRotation = Quaternion.Slerp (arms.transform.localRotation, Quaternion.Euler (0, -180f, -Input.GetAxis("Mouse X")), 20f * Time.deltaTime);
+		}
+
+	}
+}
