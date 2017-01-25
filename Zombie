@@ -1,0 +1,157 @@
+using UnityEngine;
+using System.Collections;
+
+public class Zombie : MonoBehaviour {
+	
+	public GameObject player;
+
+	public float crateDamage = 0.5f;
+	public float playerDamage = 2.5f;
+		
+	public GameObject gameManager;
+
+	public float speed = 5f;
+
+	public float health = 10f;
+
+	public GameObject blood;
+
+	public GameObject bloodSplatter;
+
+	Rigidbody rb;
+
+	public GameObject gore;
+
+	public bool alive = true;
+
+	public float attackDistance;
+
+	public GameObject zombieModel;
+
+
+
+	public float stopWalkDistance;
+
+	[System.Serializable]
+	public class JumpingStats
+	{
+		public float jumpAmount = 6.0f;
+		public float startJumping = 1f;
+		public float jumpRate = 2.1f;
+	}
+
+	public JumpingStats jumpingStats;
+
+
+	public LayerMask rayCastLayerMask;
+	// Use this for initialization
+	void Start () {
+		
+		rb = transform.GetComponent<Rigidbody> ();
+
+		player = GameObject.FindGameObjectWithTag ("Player");
+		gameManager = GameObject.FindGameObjectWithTag ("GameManager");
+
+		InvokeRepeating ("Jump", jumpingStats.startJumping, jumpingStats.jumpRate);
+	}
+
+	public virtual void Damaged(float amount)
+	{
+		GameObject createdBlood = Instantiate (blood, transform.position, transform.rotation) as GameObject;
+		Destroy (createdBlood, 0.8f);
+		health -= amount;
+		if (health <= 0) {
+
+			StartCoroutine (Die ());
+
+		}
+			
+	}
+
+	public IEnumerator Die()
+	{
+
+	
+		gameManager.SendMessage ("ZombieKilled", null, SendMessageOptions.DontRequireReceiver);
+
+		//Bleed
+
+		RaycastHit hit;
+		if (Physics.Raycast (transform.position, Vector3.down, out hit, rayCastLayerMask)) {
+			if (hit.transform.gameObject != gameObject) {
+
+				//Blood splat
+				Vector3 bloodSplatPosition = new Vector3 (hit.point.x, hit.point.y + 0.001f, hit.point.z);
+				GameObject createdBloodSplatter = Instantiate(bloodSplatter,bloodSplatPosition , Quaternion.identity) as GameObject;
+				createdBloodSplatter.transform.Rotate (Vector3.up * Random.Range (-360f, 360f));
+
+
+			}
+		}
+
+	
+
+		GameObject createdGore = Instantiate (gore, transform.position, transform.rotation) as GameObject;
+		Destroy (createdGore, 8f);
+
+
+
+		alive = false;
+
+
+		yield return new WaitForEndOfFrame ();
+		Destroy(gameObject);
+	}
+	void Jump()
+	{
+		rb.AddForce (new Vector3 (0, jumpingStats.jumpAmount, 0), ForceMode.Impulse);
+	}
+
+	void FixedUpdate()
+	{
+		
+		player = GameObject.FindGameObjectWithTag ("Player");
+		if (alive == true) {
+			Vector3 targetPosition = new Vector3 (player.transform.position.x, transform.position.y, player.transform.position.z);
+
+			Vector3 lookVector = targetPosition - transform.position;
+
+			Quaternion lookRotation = Quaternion.LookRotation (lookVector);
+
+			transform.localRotation = Quaternion.Slerp (transform.localRotation, lookRotation, 1f);
+
+			if (Vector3.Distance (transform.position, player.transform.position) > stopWalkDistance) {
+				transform.Translate (Vector3.forward * Time.deltaTime * speed);
+			}
+		}
+	}
+
+
+	// Update is called once per frame
+	void Update () {
+		
+		if (Vector3.Distance (transform.position, player.transform.position) < attackDistance) {
+			zombieModel.GetComponent<Animator> ().SetBool ("Attacking", true);
+
+		} else {
+			zombieModel.GetComponent<Animator> ().SetBool ("Attacking", false);
+		}
+	}
+
+	float collisionTimer;
+
+	void OnCollisionStay(Collision collision) {
+		if (alive == true) {
+			collisionTimer += 0.1f;
+			if (collisionTimer >= 0.9f) {
+				collisionTimer = 0.0f;
+				if (collision.gameObject.tag == "Player") {
+
+					collision.gameObject.BroadcastMessage ("SubtractHealth", playerDamage, SendMessageOptions.DontRequireReceiver);
+				} else if(collision.gameObject.tag == "Crate"){
+					collision.gameObject.BroadcastMessage ("SubtractHealth", crateDamage, SendMessageOptions.DontRequireReceiver);
+				}
+			}
+		}
+	}
+}
