@@ -1,0 +1,69 @@
+using UnityEngine;
+using System.Collections;
+using UnityEngine.UI;
+public class ZombieSpawnerManager : MonoBehaviour {
+
+	public float timer;
+	public float nextWave;
+	public float nextZombie;
+	public int intermissionTime = 20;
+
+	public Text intermissionUI;
+
+	public int wave = 0;
+
+	public float minNextWave = 80f;
+
+	GameObject[] zombieSpawns;
+	public int maxZombies = 100;
+	public int maxDemons = 13;
+	// Use this for initialization
+	void Start () {
+		timer = nextWave;
+	}
+
+	
+	// Update is called once per frame
+	void Update () {
+		//find count of enemies and then compare....
+	}
+
+	void FixedUpdate()
+	{
+		timer += 0.1f;
+		if (timer > nextWave) {
+			timer = 0.0f;
+			StartCoroutine(StartWave ());
+		}
+	}
+
+
+	IEnumerator StartIntermission()
+	{
+		for (int i = intermissionTime; i > 0; i--) {
+			intermissionUI.text = "Intermission: " + i;
+			yield return new WaitForSeconds (1f);
+		}
+	}
+
+	IEnumerator StartWave()
+	{
+		wave++;
+		if (nextWave - 5f > minNextWave) {
+			nextWave -= 5f;
+		} else {
+			nextWave = minNextWave;
+		}
+		zombieSpawns = GameObject.FindGameObjectsWithTag ("ZombieSpawn");
+
+		foreach (GameObject zombieSpawn in zombieSpawns) {
+			zombieSpawn.SendMessage ("SpawnWave");
+			yield return null;
+		}
+
+
+	}
+
+
+
+}
